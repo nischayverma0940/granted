@@ -1,57 +1,52 @@
 import './App.css'
+import { useEffect, useState } from 'react'
 import { DataTable } from './components/DataTable'
 import type { Column, Filter } from './components/DataTable'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 
 import { categories, subCategoriesMap, departments } from './models/data'
 
-const randomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
-const randomDate = (year = 2024) => new Date(year, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
-const randomAmount = (max: number) => parseFloat((Math.random() * max).toFixed(2))
-
 const formatINR = (value: number) => {
   const absVal = Math.abs(value)
   return `${value < 0 ? "- " : ""}₹${absVal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
 }
 
-type Receipt = { date: Date; sanctionOrder: string; category: string; amount: number; attachment?: string }
-type Expenditure = { date: Date; paymentOrder: string; category: string; subCategory: string; department: string; amount: number; attachment?: string }
+type Receipt = {
+  date: Date
+  sanctionOrder: string
+  category: string
+  amount: number
+  attachment?: string
+}
 
-const generateReceipts = (count: number): Receipt[] =>
-  Array.from({ length: count }, () => ({
-    date: randomDate(),
-    sanctionOrder: Math.random() > 0.5 ? `${1000 + Math.floor(Math.random() * 9000)}` : `SO-${1000 + Math.floor(Math.random() * 9000)}`,
-    category: randomItem(categories),
-    amount: randomAmount(100000),
-    attachment: Math.random() > 0.5 ? "https://example.com/file.pdf" : undefined
-  }))
+type Expenditure = {
+  date: Date
+  paymentOrder: string
+  category: string
+  subCategory: string
+  department: string
+  amount: number
+  attachment?: string
+}
 
-const generateExpenditures = (count: number): Expenditure[] =>
-  Array.from({ length: count }, () => {
-    const category = randomItem(categories)
-    const subCategories = subCategoriesMap[category]
-    return {
-      date: randomDate(),
-      paymentOrder: Math.random() > 0.5 ? `${1000 + Math.floor(Math.random() * 9000)}` : `PO-${1000 + Math.floor(Math.random() * 9000)}`,
-      category,
-      subCategory: randomItem(subCategories),
-      department: randomItem(departments),
-      amount: randomAmount(50000),
-      attachment: Math.random() > 0.5 ? "https://example.com/file.pdf" : undefined
-    }
-  })
+type CategorySummary = {
+  category: string
+  totalReceipts: number
+  totalExpenditure: number
+  balance: number
+}
 
-const receipts = generateReceipts(100)
-const expenditures = generateExpenditures(150)
+const API_BASE = "http://localhost:8000/api"
 
 const receiptColumns: Column<Receipt>[] = [
   {
     key: "date",
     label: "Date",
     sortable: true,
-    format: d => d instanceof Date
-      ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-      : String(d)
+    format: d =>
+      d instanceof Date
+        ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+        : String(d)
   },
   { key: "sanctionOrder", label: "Sanction Order", sortable: true },
   { key: "category", label: "Category", sortable: true },
@@ -65,9 +60,10 @@ const receiptColumns: Column<Receipt>[] = [
   {
     key: "attachment",
     label: "Attachment",
-    format: url => url
-      ? <a href={String(url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
-      : "-"
+    format: url =>
+      url
+        ? <a href={String(url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
+        : "-"
   }
 ]
 
@@ -76,9 +72,10 @@ const expenditureColumns: Column<Expenditure>[] = [
     key: "date",
     label: "Date",
     sortable: true,
-    format: d => d instanceof Date
-      ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-      : String(d)
+    format: d =>
+      d instanceof Date
+        ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+        : String(d)
   },
   { key: "paymentOrder", label: "Payment Order", sortable: true },
   { key: "category", label: "Category", sortable: true },
@@ -94,32 +91,18 @@ const expenditureColumns: Column<Expenditure>[] = [
   {
     key: "attachment",
     label: "Attachment",
-    format: url => url
-      ? <a href={String(url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
-      : "-"
+    format: url =>
+      url
+        ? <a href={String(url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
+        : "-"
   }
 ]
 
-type CategorySummary = {
-  category: string
-  totalReceipts: number
-  totalExpenditure: number
-  balance: number
-}
-
-const generateCategorySummary = (): CategorySummary[] => {
-  return categories.map(category => {
-    const totalReceipts = receipts.filter(r => r.category === category).reduce((sum, r) => sum + r.amount, 0)
-    const totalExpenditures = expenditures.filter(e => e.category === category).reduce((sum, e) => sum + e.amount, 0)
-    return { category, totalReceipts, totalExpenditure: totalExpenditures, balance: totalReceipts - totalExpenditures }
-  })
-}
-
 const categorySummaryColumns: Column<CategorySummary>[] = [
   { key: "category", label: "Category" },
-  { key: "totalReceipts", label: "Total Receipts", className: "text-right", format: val => formatINR(Number(val)) },
-  { key: "totalExpenditure", label: "Total Expenditures", className: "text-right", format: val => formatINR(Number(val)) },
-  { key: "balance", label: "Balance", className: "text-right", format: val => formatINR(Number(val)) }
+  { key: "totalReceipts", label: "Total Receipts", className: "text-right", format: v => formatINR(Number(v)) },
+  { key: "totalExpenditure", label: "Total Expenditures", className: "text-right", format: v => formatINR(Number(v)) },
+  { key: "balance", label: "Balance", className: "text-right", format: v => formatINR(Number(v)) }
 ]
 
 const allSubCategories = Object.values(subCategoriesMap).flat()
@@ -145,9 +128,44 @@ const expenditureFilters: Filter<Expenditure>[] = [
 ]
 
 function App() {
+  const [receipts, setReceipts] = useState<Receipt[]>([])
+  const [expenditures, setExpenditures] = useState<Expenditure[]>([])
+  const [summary, setSummary] = useState<CategorySummary[]>([])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/receipts`)
+      .then(r => r.json())
+      .then(data =>
+        setReceipts(
+          data.map((r: any) => ({
+            ...r,
+            date: new Date(r.date),
+            amount: Number(r.amount)
+          }))
+        )
+      )
+
+    fetch(`${API_BASE}/expenditures`)
+      .then(r => r.json())
+      .then(data =>
+        setExpenditures(
+          data.map((e: any) => ({
+            ...e,
+            date: new Date(e.date),
+            amount: Number(e.amount)
+          }))
+        )
+      )
+
+    fetch(`${API_BASE}/summary`)
+      .then(r => r.json())
+      .then(setSummary)
+  }, [])
+
   return (
     <main className="px-2 md:px-4 lg:px-8 xl:px-16 py-12">
       <h1 className="flex flex-row justify-center text-4xl font-bold pb-4">Dashboard</h1>
+
       <Accordion type="multiple" defaultValue={["summary"]} className="space-y-4">
 
         <AccordionItem value="receipts">
@@ -170,7 +188,10 @@ function App() {
               columns={expenditureColumns}
               filters={expenditureFilters}
               defaultSort="date"
-              dynamicSelectOptions={{ subCategory: (fv) => fv.category ? subCategoriesMap[fv.category] : allSubCategories }}
+              dynamicSelectOptions={{
+                subCategory: fv =>
+                  fv.category ? subCategoriesMap[fv.category] : allSubCategories
+              }}
             />
           </AccordionContent>
         </AccordionItem>
@@ -179,7 +200,7 @@ function App() {
           <AccordionTrigger className="text-lg font-semibold hover:no-underline">Summary</AccordionTrigger>
           <AccordionContent>
             <DataTable
-              data={generateCategorySummary()}
+              data={summary}
               columns={categorySummaryColumns}
               defaultSort="category"
               showResultCount={false}
